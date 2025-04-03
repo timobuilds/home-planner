@@ -6,6 +6,7 @@ import { db } from '@/lib/db';
 import { projects } from '@/lib/schema';
 import { eq, desc } from 'drizzle-orm';
 import { Skeleton } from '@/components/ui/skeleton'; // Assuming shadcn/ui Skeleton
+import { Toaster } from "@/components/ui/toaster" // Import
 
 // Async component to fetch projects for navigation
 async function ProjectNav({ currentProjectId }: { currentProjectId?: number }) {

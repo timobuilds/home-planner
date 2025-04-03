@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import { getRequiredAuthSession, isProUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { projects } from '@/lib/schema';
@@ -6,6 +6,17 @@ import { eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; // Assuming shadcn/ui Card
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"; // Import Dialog components
+import { TaskForm } from './_components/TaskForm'; // Import the form
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
 // import ProBanner from '@/components/ProBanner'; // Import when ready
 // import UpgradeCTA from '@/components/UpgradeCTA'; // Import when ready
 
@@ -62,8 +73,7 @@ async function TaskSummary({ projectId, clerkUserId }: { projectId: number, cler
     );
 }
 
-
-export default async function ProjectDashboardPage({ params }: PageProps) {
+export default function ProjectDashboardPage({ params }: PageProps) {
   const { userId } = getRequiredAuthSession();
   const projectId = parseInt(params.projectId, 10);
   const userIsPro = await isProUser(); // Check user plan
@@ -87,6 +97,33 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
   if (!project) {
     notFound();
   }
+
+  // State to manage dialog visibility and task being edited
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<DbTask | null>(null);
+
+  // Handler for opening the dialog to add a task
+  const handleAddTaskClick = () => {
+    setEditingTask(null); // Ensure we are in "create" mode
+    setIsDialogOpen(true);
+  };
+
+  // Handler for opening the dialog to edit a task (would be called from TaskCard potentially)
+  const handleEditTaskClick = (task: DbTask) => {
+    setEditingTask(task);
+    setIsDialogOpen(true);
+  };
+
+  // Handler for when a task is successfully saved (created or updated)
+  const handleTaskSaved = (savedTask: DbTask) => {
+    console.log("Task saved:", savedTask);
+    // TODO: Update the task list state in TaskViewManager
+    // This requires lifting state up or using a state management library/context
+    // For now, we might need to trigger a re-fetch or rely on revalidation
+    setIsDialogOpen(false); // Close dialog
+    // Manually trigger revalidation if necessary (or rely on action's revalidatePath)
+    // router.refresh(); // Requires importing useRouter from next/navigation
+  };
 
   return (
     <div className="space-y-6">
@@ -152,6 +189,32 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
 
        {/* Optional: Upgrade CTA at the bottom */}
        {/* {!userIsPro && <UpgradeCTA reason="Get access to advanced reporting and collaboration tools." />} */}
+
+       {/* Add Task Button triggers Dialog */}
+       <div className="flex flex-shrink-0 space-x-2">
+           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+               <DialogTrigger asChild>
+                   <Button onClick={handleAddTaskClick}>
+                       <PlusCircle className="mr-2 h-4 w-4" /> Add Task
+                   </Button>
+               </DialogTrigger>
+               <DialogContent className="sm:max-w-[425px]"> {/* Adjust width if needed */}
+                   <DialogHeader>
+                       <DialogTitle>{editingTask ? 'Edit Task' : 'Add New Task'}</DialogTitle>
+                       <DialogDescription>
+                           {editingTask ? 'Make changes to your existing task.' : 'Fill in the details for the new task.'}
+                       </DialogDescription>
+                   </DialogHeader>
+                   {/* Render TaskForm inside the Dialog */}
+                    <TaskForm
+                       projectId={project.id}
+                       task={editingTask}
+                       onOpenChange={setIsDialogOpen}
+                       onTaskSaved={handleTaskSaved}
+                    />
+               </DialogContent>
+           </Dialog>
+       </div>
     </div>
   );
 }

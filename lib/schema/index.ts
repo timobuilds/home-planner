@@ -2,6 +2,8 @@
 export * from './users';
 export * from './projects';
 export * from './tasks';
+export * from './projectTeamMembers';
+export type { DbTask, NewDbTask } from './tasks';
 
 // TODO: Export other schemas as they are created
 // export * from './budgets';
